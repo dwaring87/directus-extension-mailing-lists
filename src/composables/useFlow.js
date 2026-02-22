@@ -19,9 +19,9 @@ export default () => {
 
       // Create the flow
       const data_flow = {
-        name: `Mail Manager - ${message_name}`,
+        name: `Mailing Lists - ${message_name}`,
         icon: 'outgoing_mail',
-        description: `Automatically created flow by the mail-manager extension to send message ${message_name}.`,
+        description: `Automatically created flow by the mailing list extension to send message ${message_name}.`,
         status: 'active',
         trigger: 'webhook',
         accountability: 'all',

@@ -1,6 +1,6 @@
 <template>
   <private-view :title="title">
-    <template #headline>Mail Manager</template>
+    <template #headline>Mailing Lists</template>
 
     <template #title-outer:prepend>
       <v-button v-if="icon" class="header-icon" rounded disabled icon secondary>
@@ -10,18 +10,18 @@
 
     <template #navigation>
       <v-list nav>
-        <v-list-item to="/mail-manager/" key="messages" :active="title == 'Messages'">
+        <v-list-item to="/mailing-lists/" key="messages" :active="title == 'Messages'">
           <v-list-item-icon><v-icon name="mail" /></v-list-item-icon>
           <v-list-item-content><v-text-overflow text="Messages" /></v-list-item-content>
         </v-list-item>
-        <v-list-item to="/mail-manager/lists" key="lists" :active="title == 'Lists'">
+        <v-list-item to="/mailing-lists/lists" key="lists" :active="title == 'Lists'">
           <v-list-item-icon><v-icon name="people" /></v-list-item-icon>
           <v-list-item-content><v-text-overflow text="Lists" /></v-list-item-content>
         </v-list-item>
       </v-list>
     </template>
 
-    <div class="mail-manager-container">
+    <div class="mailing-lists-container">
       <v-notice v-if="loadingError" type="danger" icon="error">{{ loadingError }}</v-notice>
       <div v-else-if="loading" style="display: flex; justify-content: center; padding: 25px;">
         <v-progress-circular indeterminate />
@@ -57,7 +57,7 @@
 </script>
 
 <style>
-  .mail-manager-container {
+  .mailing-lists-container {
     padding: 15px;
   }
 </style>

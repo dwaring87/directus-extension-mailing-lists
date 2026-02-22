@@ -5,7 +5,7 @@ import useLists from './useLists';
 import useMessageStatusCodes from './useMessageStatusCodes';
 
 // Collection for storing messages
-const COLLECTION_NAME = 'extension_mailing_list_messages';
+const COLLECTION_NAME = 'extension_mailing_lists_messages';
 const COLLECTION_VERSION = '3';
 const COLLECTION_FIELDS = [
   {

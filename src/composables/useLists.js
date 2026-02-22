@@ -2,7 +2,7 @@ import { useApi } from '@directus/extensions-sdk';
 import useCollection from './useCollection';
 
 // Collection storing lists
-const COLLECTION_NAME = 'extension_mailing_list_lists';
+const COLLECTION_NAME = 'extension_mailing_lists';
 const COLLECTION_VERSION = '3';
 const COLLECTION_FIELDS = [
   {

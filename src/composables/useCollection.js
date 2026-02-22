@@ -35,7 +35,7 @@
           "fields": fields,
           "schema": {},
           "meta": {
-            "note": `Collection for the mail manager extension|${version}`,
+            "note": `Collection for the mailing lists extension|${version}`,
             "hidden": true,
             "singleton": false
           }
