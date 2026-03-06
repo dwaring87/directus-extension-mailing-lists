@@ -135,8 +135,6 @@
 
   const props = defineProps({ editedMessage: Object });
   watch(() => props.editedMessage, (m) => {
-    console.log("==> EDIT MESSAGE WATCH:");
-    console.log(m);
     if ( m ) load(m.name)
   });
 

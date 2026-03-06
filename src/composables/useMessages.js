@@ -298,10 +298,7 @@ export default () => {
    * @returns {String} rtn.data - HTML string of body content
    */
   const buildBody = (body = "", item = {}) => {
-    console.log("==> BUILD BODY:");
-    console.log(item);
     item = flattenObject(item);
-    console.log(item);
     try {
       let html = body.replaceAll(/\n+/g, '\n')
       html = '<p>' + html.split('\n').join('</p><br /><p>') + '</p>';
