@@ -4,7 +4,7 @@
       :updatedMessages="updatedMessages"
       @editedMessage="(v) => editedMessage = v" />
     <MessagesCreate 
-      @updateMessages="(t) => updatedMessages = t"
+      @updateMessages="(m) => onUpdateMessages(m)"
       :editedMessage="editedMessage"/>
   </Page>
 </template>
@@ -17,4 +17,9 @@
 
   const updatedMessages = ref();
   const editedMessage = ref();
+
+  const onUpdateMessages = (m) => {
+    updatedMessages.value = new Date().getTime();;
+    if ( m.id && m.name ) editedMessage.value = m;
+  }
 </script>

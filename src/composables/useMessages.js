@@ -3,6 +3,7 @@ import useCollection from './useCollection';
 import useFlow from './useFlow';
 import useLists from './useLists';
 import useMessageStatusCodes from './useMessageStatusCodes';
+import { flattenObject } from './useJSON';
 
 // Collection for storing messages
 const COLLECTION_NAME = 'extension_mailing_lists_messages';
@@ -175,6 +176,40 @@ export default () => {
   }
 
   /**
+   * Test the message arguments
+   * - make sure required arguments are set
+   * - if a status is set, make sure it's a valid status
+   * - make sure list id is valid
+   * @param {String} status Current status of the message (default: draft)
+   * @param {Integer} list_id ID of Mailing List
+   * @param {String} message_name Message Name (must be unique)
+   * @param {String} subject Email Subject
+   * @param {String} body Body content of the message (as HTML string)
+   * @param {String} template Name of the email template
+   * @param {String} body_prop Name of the data prop for body content
+   * @returns {Promise<String>} error message, if encountered
+   */
+  const checkMessageArguments = async ({ status, list_id, message_name, subject, body, template, body_prop }) => {
+    if ( status ) {
+      if ( !Object.values(MESSAGE_STATUS_CODES).includes(status) ) {
+        return `The message status ${status} is not valid`;
+      }
+    }
+
+    if ( !list_id ) return `The mailing list must be selected`;
+    const { data:list } = await getLists({ id: list_id });
+    if ( !list || list.id !== list_id ) {
+      return `The list (id: ${list_id}) could not be found`;
+    }
+
+    if ( !message_name || message_name === '' ) return `The message name is required`;
+    if ( !subject || subject === '' ) return `The subject is required`;
+    if ( !body || body === '' ) return `The body is required`;
+    if ( !template || template === '' ) return `The template name is required`;
+    if ( !body_prop || body_prop === '' ) return `The body prop name is required`;
+  }
+
+  /**
    * Create a new Message
    * - add an item to the extension messages collection
    * @param {String} status Current status of the message (default: draft)
@@ -201,6 +236,8 @@ export default () => {
         template,
         body_prop
       }
+      const error = await checkMessageArguments(data);
+      if ( error ) return { error };
       const resp = await api.post(`/items/${COLLECTION_NAME}`, data);
       return resp?.data?.data ? { data: resp?.data?.data } : { error: "Could not create message" };
     }
@@ -240,6 +277,8 @@ export default () => {
         items,
         flow_id
       }
+      const error = await checkMessageArguments(data);
+      if ( error ) return { error };
       const resp = await api.patch(`/items/${COLLECTION_NAME}/${message_id}`, data);
       return resp?.data?.data ? { data: resp?.data?.data } : { error: "Could not edit message" };
     }
@@ -259,6 +298,10 @@ export default () => {
    * @returns {String} rtn.data - HTML string of body content
    */
   const buildBody = (body = "", item = {}) => {
+    console.log("==> BUILD BODY:");
+    console.log(item);
+    item = flattenObject(item);
+    console.log(item);
     try {
       let html = body.replaceAll(/\n+/g, '\n')
       html = '<p>' + html.split('\n').join('</p><br /><p>') + '</p>';
@@ -293,63 +336,71 @@ export default () => {
    * @returns {Promise<Object>} rtn
    * @returns {String} rtn.error - Error message, if encountered
    */
-  const sendMessage = async ({ message_id, list_id, message_name, reply_to, subject, body, template, body_prop, updateCallback, sendCallback }) => {
+  const sendMessage = async ({ message_id, list_id, message_name, test_email, reply_to, subject, body, template, body_prop, updateCallback, sendCallback }) => {
 
     // Update the message, if already exists, or create new message
     if ( message_id ) {
       const { error:updateError } = await editMessage(message_id, { status: MESSAGE_STATUS_CODES.active, list_id, message_name, reply_to, subject, body, template, body_prop });
-      if ( updateError ) return { error: `Could not update message before sending [${updateError}]` };
+      if ( updateError ) return _finish(`Could not update message before sending [${updateError}]`);
     }
     else {
       const { data, error:createError } = await createMessage({ status: MESSAGE_STATUS_CODES.active, list_id, message_name, reply_to, subject, body, template, body_prop });
-      if ( createError ) return { error: `Could not create message before sending [${createError}]` };
+      if ( createError ) return _finish(`Could not create message before sending [${createError}]`);
       message_id = data.id;
     }
     if ( updateCallback ) updateCallback();
 
     // Get list
     const { error:listError, data:list } = await getLists({ id: list_id });
-    if ( listError ) return { error: listError };
-    if ( !list || Array.isArray(list) ) return { error: `Could not find selected mailing list` };
+    if ( listError ) return _finish(listError);
+    if ( !list || Array.isArray(list) ) return _finish(`Could not find selected mailing list`);
 
     // Create the flow
     const { error:flowError, data: { flow, operation } } = await createFlow(message_name);
-    if ( flowError ) return { error: flowError };
+    if ( flowError ) return _finish(flowError);
 
     // Process each recipient
-    for ( let i = 0; i < list.items.length; i++ ) {
+    const max = !!test_email ? 1 : list.items.length;
+    for ( let i = 0; i < max; i++ ) {
       const item = list.items[i];
-      const email = item[list.email_field];
-      if ( sendCallback ) sendCallback(`Sending to: ${email}`, (i+1), list.items.length);
+      const email = !!test_email ? test_email : item[list.email_field];
+      if ( sendCallback ) sendCallback(`Sending to: ${email}`, (i+1), max);
 
       // Generate the body
       const { error:bodyError, data:body_html } = buildBody(body, item);
-      if ( bodyError ) return { error: bodyError };
+      if ( bodyError ) return _finish(bodyError);
 
       // Update operation
       const { error:updatedOperationError } = await updateOperation(
         operation.id, email, reply_to, subject, body_html, body_prop, item, template
       );
-      if ( updatedOperationError ) return { error: updatedOperationError };
+      if ( updatedOperationError ) return _finish(updatedOperationError);
       
       // Trigger Flow
       const { error:triggerError } = await triggerFlow(flow.id);
-      if ( triggerError ) return { error: triggerError };
+      if ( triggerError ) return _finish(triggerError);
 
       // Pause before sending the next message...
       await new Promise(r => setTimeout(r, 1500));
     }
 
     // Update the status of the message
-    const { error:updateError2 } = await editMessage(message_id, { status: MESSAGE_STATUS_CODES.sent, items: list.items, flow: flow.id });
-    if ( updateError2 ) return { error: `Could not update message after sending messages [${updateError2}]` };
+    const completeStatus = !!test_email ? MESSAGE_STATUS_CODES.previewed : MESSAGE_STATUS_CODES.sent;
+    const { error:updateError2 } = await editMessage(message_id, { status: completeStatus, list_id, message_name, reply_to, subject, body, template, body_prop, items: list.items, flow: flow.id });
+    if ( updateError2 ) return _finish(`Could not update message after sending messages [${updateError2}]`);
     if ( updateCallback ) updateCallback();
 
     // Deactivate the flow
-    const { error:deactivateFlowError } = await deactivateFlow(flow.id);
-    if ( deactivateFlowError ) return { error: deactivateFlowError };
+    if ( !test_email ) {
+      const { error:deactivateFlowError } = await deactivateFlow(flow.id);
+      if ( deactivateFlowError ) return _finish(deactivateFlowError);
+    }
 
-    return { }
+    return _finish();
+
+    function _finish(error) {
+      return { error, message: { id: message_id, name: message_name } };
+    }
   }
 
   return { setupMessages, createMessage, removeMessage, editMessage, getMessages, buildBody, sendMessage }

@@ -85,7 +85,7 @@
           <div class="field-label">
             Body
           </div>
-          <VTextarea v-model="body" @blur="onUpdateBody" />
+          <VTextarea v-model="body" @blur="onUpdateBody" placeholder='Hi {{ name }},&#10;&#10;This is the body of the message.' />
           <small class="type-note">
             <p>The content of the message.  Use curly brackets to include field values that will be replaced for each recipient, such as <code v-pre>{{ name }}</code>.</p>
           </small>
@@ -95,7 +95,18 @@
           <div style="display: flex; justify-content: space-between;">
             <VButton v-if="editedMessage" @click="edit" :disabled="updating">Update</VButton>
             <VButton v-else @click="create" :disabled="updating">Save</VButton>
-            <VButton @click="send" warning :disabled="updating">Send</VButton>
+            <VButton @click="() => send()" warning :disabled="updating">Send</VButton>
+          </div>
+        </div>
+
+        <VDivider />
+
+        <div class="field-group">
+          <div class="field-label">Test Message</div>
+          <small class="type-note">Send a test message to yourself to preview the final message.</small>
+          <div style="display: flex; justify-content: space-between; gap: 15px">
+            <VInput v-model="test_email" />
+            <VButton @click="() => sendTest()" warning :disabled="updating">Send Test</VButton>
           </div>
         </div>
       </VSheet>
@@ -117,25 +128,32 @@
   import { ref, watch, onMounted } from 'vue';
   import useLists from '../../composables/useLists.js';
   import useMessages from '../../composables/useMessages.js';
+  import useUser from '../../composables/useUser.js';
   const { getLists } = useLists();
   const { getMessages, createMessage, editMessage, sendMessage } = useMessages();
+  const { getUser } = useUser();
 
   const props = defineProps({ editedMessage: Object });
   watch(() => props.editedMessage, (m) => {
+    console.log("==> EDIT MESSAGE WATCH:");
+    console.log(m);
     if ( m ) load(m.name)
   });
 
   const emit = defineEmits(['updateMessages']);
-  const onUpdateMessages = () => emit('updateMessages', new Date().getTime());
+  const onUpdateMessages = (m) => emit('updateMessages', m);
 
   // Initial new message data
   const list_id = ref();
-  const message_name = ref("Test Message");
+  const message_name = ref();
   const reply_to = ref();
-  const subject = ref("Testing");
-  const body = ref("This is a test message for {{ name }}");
+  const subject = ref();
+  const body = ref();
   const template = ref("base");
   const body_prop = ref("html");
+  
+  // Set test email address from user
+  const test_email = ref();
 
   // Message data watchers
   watch(list_id, (l) => {
@@ -182,6 +200,7 @@
     updating.value = true;
     errorMessage.value = undefined;
     successMessage.value = undefined;
+    sendPercentage.value = 0;
     const { error, data } = await createMessage({
       list_id: list_id.value,
       message_name: message_name.value,
@@ -194,7 +213,7 @@
     updating.value = false;
     errorMessage.value = error;
     successMessage.value = `${data.message_name} created!`;
-    onUpdateMessages();
+    onUpdateMessages({ id: data.id, name: data.message_name });
   }
 
   // Edit existing message
@@ -202,7 +221,9 @@
     updating.value = true;
     errorMessage.value = undefined;
     successMessage.value = undefined;
+    sendPercentage.value = 0;
     const { error, data } = await editMessage(props.editedMessage.id, {
+      list_id: list_id.value,
       message_name: message_name.value,
       reply_to: reply_to.value,
       subject: subject.value,
@@ -213,7 +234,7 @@
     updating.value = false;
     errorMessage.value = error;
     successMessage.value = `${data.message_name} updated!`;
-    onUpdateMessages();
+    onUpdateMessages({ id: data.id, name: data.message_name });
   }
 
   // Send Message
@@ -221,16 +242,17 @@
     console.log(`${status} [${count}/${total}]`);
     sendPercentage.value = (count/total)*100;
   }
-  const send = async () => {
-    if ( confirm("Are you sure you want to send this message now?") ) {
+  const send = async (test=false) => {
+    if ( !!test || confirm("Are you sure you want to send this message now?") ) {
       updating.value = true;
       errorMessage.value = undefined;
       successMessage.value = undefined;
       sendPercentage.value = 0;
-      const { error } = await sendMessage({
+      const { error, message } = await sendMessage({
         message_id: props.editedMessage?.id,
         list_id: list_id.value,
         message_name: message_name.value,
+        test_email: test ? test_email.value : undefined,
         reply_to: reply_to.value,
         subject: subject.value,
         body: body.value,
@@ -242,11 +264,17 @@
       updating.value = false;
       errorMessage.value = error;
       successMessage.value = !error ? 'Messages Sent!' : undefined;
+      onUpdateMessages({ id: message.id, name: message.name });
     }
+  }
+  const sendTest = async () => {
+    await send(true);
   }
 
   onMounted(async () => {
     await updateLists();
+    const { data:user } = await getUser();
+    test_email.value = user?.email;
   });
 </script>
 

@@ -19,6 +19,7 @@
         <VIcon v-if="item.status === MESSAGE_STATUS_CODES.draft" name="edit" />
         <VIcon v-else-if="item.status === MESSAGE_STATUS_CODES.active" name="hourglass_bottom" />
         <VIcon v-else-if="item.status === MESSAGE_STATUS_CODES.sent" name="mark_email_read" />
+        <VIcon v-else-if="item.status === MESSAGE_STATUS_CODES.previewed" name="preview" />
         <span>{{ item.message_name }}</span>
       </div>
     </template>
