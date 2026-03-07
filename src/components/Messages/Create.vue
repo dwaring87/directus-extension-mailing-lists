@@ -158,6 +158,7 @@
     selected_list.value = l ? lists.value?.filter((e) => e.id === l)[0] : undefined;
     if ( !props.editedMessage ) template.value = selected_list.value?.default_template || 'base';
     if ( !props.editedMessage ) body_prop.value = selected_list.value?.default_body_prop || 'html';
+    if ( !props.editedMessage ) reply_to.value = selected_list.value?.default_reply_to;
   });
 
   // Load Lists

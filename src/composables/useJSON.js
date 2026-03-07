@@ -1,25 +1,31 @@
 /**
  * Pretty print a JSON string to be displayed in a textarea
- * @param {String} str JSON String
+ * @param {String|Object|Array} data JSON String (to be parsed) or JSON Object/Array
  * @param {String} [def] Default type (fields, filter)
  * @returns {String} pretty-printed JSON string
  */
-const formatJSON = (str, def) => {
+const formatJSON = (data, def) => {
   try {
-    if ( !str || str === '' ) {
-      if ( def === 'fields' ) str = '["*"]';
-      if ( def === 'filter' ) str = '{}';
+    if ( !data || data === '' ) {
+      if ( def === 'fields' ) data = '["*"]';
+      if ( def === 'filter' ) data = '{}';
     }
-    const js = JSON.parse(str);
+    const js = typeof data === 'string' || data instanceof String ? JSON.parse(data) : data;
     const pp = JSON.stringify(js, null, 4);
     return pp;
   }
   catch (err) {
-    return str;
+    return data;
   }
 }
 
-const flattenObject = (nestedObj) => {
+/**
+ * Flatten the keys of a nested object so there is only one level
+ * of properties, converting the the property names to '.' notation
+ * @param {Object} nestedObj Nested Object
+ * @returns {Object} Object with flattened keys
+ */
+const flattenObject = (nestedObj = {}) => {
   const result = {};
   const visited = new Set(); // To detect circular references
 

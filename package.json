@@ -2,7 +2,7 @@
 	"name": "directus-extension-mailing-lists",
 	"description": "Send messages to email addresses stored in the database",
 	"icon": "extension",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"keywords": [
 		"directus",
 		"directus-extension",

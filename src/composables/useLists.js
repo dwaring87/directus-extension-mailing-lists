@@ -3,7 +3,7 @@ import useCollection from './useCollection';
 
 // Collection storing lists
 const COLLECTION_NAME = 'extension_mailing_lists';
-const COLLECTION_VERSION = '3';
+const COLLECTION_VERSION = '4';
 const COLLECTION_FIELDS = [
   {
     "field": "id",
@@ -71,6 +71,14 @@ const COLLECTION_FIELDS = [
       "interface": "input",
     },
     "schema": {}
+  },
+  {
+    "field": "default_reply_to",
+    "type": "string",
+    "meta": {
+      "interface": "input",
+    },
+    "schema": {}
   }
 ];
 
@@ -118,7 +126,6 @@ export default () => {
 
       // Get the item count for each list
       for ( let i = 0; i < lists.length; i++ ) {
-        lists[i].fields = JSON.parse(lists[i].fields);
         const { error, data } = await getListItems(lists[i].list_name, lists[i].collection_name, lists[i].fields, lists[i].email_field, lists[i].filter);
         if ( error ) return { error };
 
@@ -176,7 +183,7 @@ export default () => {
       return "Email Field is required";
     }
     if ( !filter || filter === '' ) {
-      filter = '{}';
+      filter = {};
     }
 
     try {
@@ -188,7 +195,7 @@ export default () => {
     }
 
     try {
-      filter = JSON.parse(filter);
+      filter = typeof filter === 'string' || filter instanceof String ? JSON.parse(filter) : filter;
       if ( typeof filter !== 'object' || filter === null || Array.isArray(filter) ) throw new Error('Not an object');
     }
     catch (err) {
@@ -207,11 +214,12 @@ export default () => {
    * @param {String} filter JSON String of Filter Object
    * @param {String} default_template Name of default email template
    * @param {String} default_body_prop Name of default data prop for body content
+   * @param {String} default_reply_to Default Reply-To email address
    * @returns {Promise<Object>} rtn
    * @returns {String} rtn.error - Error message, if encountered
    * @returns {Object[]} rtn.data - New List Properties
    */
-  const createList = async (list_name, collection_name, fields, email_field, filter, default_template, default_body_prop) => {
+  const createList = async (list_name, collection_name, fields, email_field, filter, default_template, default_body_prop, default_reply_to) => {
     try {
 
       // Test List Arguments
@@ -226,7 +234,8 @@ export default () => {
         email_field,
         filter: filter ? JSON.parse(filter) : {},
         default_template,
-        default_body_prop
+        default_body_prop,
+        default_reply_to
       }
       const resp = await api.post(`/items/${COLLECTION_NAME}`, data);
       return resp?.data?.data ? { data: resp?.data?.data } : { error: "Could not create list" };
@@ -249,11 +258,12 @@ export default () => {
    * @param {String} filter JSON String of Filter Object
    * @param {String} default_template Name of default email template
    * @param {String} default_body_prop Name of default data prop for body content
+   * @param {String} default_reply_to Default Reply-To email address
    * @returns {Promise<Object>} rtn
    * @returns {String} rtn.error - Error message, if encountered
    * @returns {Object[]} rtn.data - Updated List Properties
    */
-  const editList = async (list_id, { list_name, collection_name, fields, email_field, filter, default_template, default_body_prop }) => {
+  const editList = async (list_id, { list_name, collection_name, fields, email_field, filter, default_template, default_body_prop, default_reply_to }) => {
     try {
 
       // Test List Arguments
@@ -268,7 +278,8 @@ export default () => {
         email_field,
         filter: filter ? JSON.parse(filter) : undefined,
         default_template,
-        default_body_prop
+        default_body_prop,
+        default_reply_to
       }
       const resp = await api.patch(`/items/${COLLECTION_NAME}/${list_id}`, data);
       return resp?.data?.data ? { data: resp?.data?.data } : { error: "Could not edit list" };
@@ -303,7 +314,7 @@ export default () => {
       // Get Items
       const params = {
         fields: fields || [],
-        filter: filter ? JSON.parse(filter) : {},
+        filter: filter || {},
         limit: limit
       }
       const resp = await api.get(`/items/${collection_name}`, { params });

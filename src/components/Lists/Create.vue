@@ -89,6 +89,16 @@
         </div>
 
         <div class="field-group">
+          <div class="field-label">
+            Default Reply-To
+          </div>
+          <VInput v-model="default_reply_to" />
+          <small class="type-note">
+            <p>The default email address to set as the Reply-To address.  This can be changed for each message.</p>
+          </small>
+        </div>
+
+        <div class="field-group">
           <div style="display: flex; justify-content: space-between;">
             <VButton v-if="editedList" @click="edit" :disabled="creating">Update</VButton>
             <VButton v-else @click="create" :disabled="creating">Create</VButton>
@@ -143,7 +153,7 @@
 
 <script setup>
   import { ref, watch, computed } from 'vue';
-  import { formatJSON } from '../../composables/useJSON.js';
+  import { formatJSON, flattenObject } from '../../composables/useJSON.js';
   import useCollection from '../../composables/useCollection.js';
   import useLists from '../../composables/useLists.js';
   const { getCollections, getFields } = useCollection();
@@ -169,6 +179,7 @@
   const filter = ref(formatJSON('{ "email": { "_nempty": true }}'));
   const default_template = ref("base");
   const default_body_prop = ref("html");
+  const default_reply_to = ref();
   const limit = 50;
 
   const load = async (listName) => {
@@ -181,6 +192,7 @@
       filter.value = formatJSON(data.filter, 'filter');
       default_template.value = data.default_template;
       default_body_prop.value = data.default_body_prop;
+      default_reply_to.value = data.default_reply_to;
     }
   }
 
@@ -190,7 +202,7 @@
   const create = async () => {
     creating.value = true;
     creatingError.value = undefined;
-    const { error, data } = await createList(list_name.value, collection_name.value, fields.value, email_field.value, filter.value, default_template.value, default_body_prop.value);
+    const { error, data } = await createList(list_name.value, collection_name.value, fields.value, email_field.value, filter.value, default_template.value, default_body_prop.value, default_reply_to.value);
     creating.value = false;
     creatingError.value = error;
     creatingSuccess.value = data.list_name;
@@ -208,7 +220,8 @@
       email_field: email_field.value,
       filter: filter.value,
       default_template: default_template.value,
-      default_body_prop: default_body_prop.value
+      default_body_prop: default_body_prop.value,
+      default_reply_to: default_reply_to.value
     });
     creating.value = false;
     creatingError.value = error;
@@ -227,7 +240,7 @@
     const { error, data } = await getListItems(list_name.value, collection_name.value, fields.value, email_field.value, filter.value, limit);
     testing.value = false;
     testingError.value = error;
-    testingResults.value = data;
+    testingResults.value = data.map((e) => flattenObject(e));
   }
   const toggleTestingResults = (index) => {
     if ( testingResultsVisible.value.includes(index) ) {
