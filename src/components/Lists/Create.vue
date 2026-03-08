@@ -174,25 +174,33 @@
   // Initial new list data
   const list_name = ref();
   const collection_name = ref();
-  const fields = ref([ "email" ]);
-  const email_field = ref("email");
+  const fields = ref([]);
+  const email_field = ref();
   const filter = ref(formatJSON('{ "email": { "_nempty": true }}'));
   const default_template = ref("base");
   const default_body_prop = ref("html");
   const default_reply_to = ref();
   const limit = 50;
+  watch(collection_name, () => {
+    fields.value = [];
+    email_field.value = undefined;
+  });
 
   const load = async (listName) => {
     const { data } = await getLists({ name: listName });
     if ( data ) {
       list_name.value = data.list_name;
       collection_name.value = data.collection_name;
-      fields.value = data.fields;
-      email_field.value = data.email_field;
-      filter.value = formatJSON(data.filter, 'filter');
-      default_template.value = data.default_template;
-      default_body_prop.value = data.default_body_prop;
-      default_reply_to.value = data.default_reply_to;
+
+      // prevent the collection_name watcher from clearing the fields
+      setTimeout(() => {
+        fields.value = data.fields;
+        email_field.value = data.email_field;
+        filter.value = formatJSON(data.filter, 'filter');
+        default_template.value = data.default_template;
+        default_body_prop.value = data.default_body_prop;
+        default_reply_to.value = data.default_reply_to;
+      }, 0);
     }
   }
 
