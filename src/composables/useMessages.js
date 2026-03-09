@@ -161,14 +161,18 @@ export default () => {
   }
 
   /**
-   * Remove the specified Message, by ID
+   * Remove the specified Message, by ID (along with the associated Flow)
    * @param {Integer} message_id List ID
    * @returns {Promise<Object>} rtn
    * @returns {String} rtn.error - Error message, if encountered
    */
   const removeMessage = async (message_id) => {
     try {
-      await api.delete(`/items/${COLLECTION_NAME}/${message_id}`);
+      const { data:message } = await getMessages({ id: message_id });
+      if ( message ) {
+        if ( message.flow_id ) await api.delete(`/flows/${message.flow_id}`);
+        await api.delete(`/items/${COLLECTION_NAME}/${message_id}`);
+      }
     }
     catch (err) {
       return { error: err?.message || err }
@@ -383,7 +387,7 @@ export default () => {
 
     // Update the status of the message
     const completeStatus = !!test_email ? MESSAGE_STATUS_CODES.previewed : MESSAGE_STATUS_CODES.sent;
-    const { error:updateError2 } = await editMessage(message_id, { status: completeStatus, list_id, message_name, reply_to, subject, body, template, body_prop, items: list.items, flow: flow.id });
+    const { error:updateError2 } = await editMessage(message_id, { status: completeStatus, list_id, message_name, reply_to, subject, body, template, body_prop, items: list.items, flow_id: flow.id });
     if ( updateError2 ) return _finish(`Could not update message after sending messages [${updateError2}]`);
     if ( updateCallback ) updateCallback();
 

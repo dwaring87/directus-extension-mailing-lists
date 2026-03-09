@@ -3,7 +3,7 @@ import useCollection from './useCollection';
 
 // Collection storing lists
 const COLLECTION_NAME = 'extension_mailing_lists';
-const COLLECTION_VERSION = '4';
+const COLLECTION_VERSION = '5';
 const COLLECTION_FIELDS = [
   {
     "field": "id",
@@ -79,6 +79,14 @@ const COLLECTION_FIELDS = [
       "interface": "input",
     },
     "schema": {}
+  },
+  {
+    "field": "additional_props_url",
+    "type": "string",
+    "meta": {
+      "interface": "input",
+    },
+    "schema": {}
   }
 ];
 
@@ -126,7 +134,7 @@ export default () => {
 
       // Get the item count for each list
       for ( let i = 0; i < lists.length; i++ ) {
-        const { error, data } = await getListItems(lists[i].list_name, lists[i].collection_name, lists[i].fields, lists[i].email_field, lists[i].filter);
+        const { error, data } = await getListItems(lists[i].list_name, lists[i].collection_name, lists[i].fields, lists[i].email_field, lists[i].filter, lists[i].additional_props_url);
         if ( error ) return { error };
 
         const items = data && Array.isArray(data) ? data : [];
@@ -215,11 +223,12 @@ export default () => {
    * @param {String} default_template Name of default email template
    * @param {String} default_body_prop Name of default data prop for body content
    * @param {String} default_reply_to Default Reply-To email address
+   * @param {String} additional_props_url URL to request additional data properties
    * @returns {Promise<Object>} rtn
    * @returns {String} rtn.error - Error message, if encountered
    * @returns {Object[]} rtn.data - New List Properties
    */
-  const createList = async (list_name, collection_name, fields, email_field, filter, default_template, default_body_prop, default_reply_to) => {
+  const createList = async (list_name, collection_name, fields, email_field, filter, default_template, default_body_prop, default_reply_to, additional_props_url) => {
     try {
 
       // Test List Arguments
@@ -235,7 +244,8 @@ export default () => {
         filter: filter ? JSON.parse(filter) : {},
         default_template,
         default_body_prop,
-        default_reply_to
+        default_reply_to,
+        additional_props_url
       }
       const resp = await api.post(`/items/${COLLECTION_NAME}`, data);
       return resp?.data?.data ? { data: resp?.data?.data } : { error: "Could not create list" };
@@ -259,11 +269,12 @@ export default () => {
    * @param {String} default_template Name of default email template
    * @param {String} default_body_prop Name of default data prop for body content
    * @param {String} default_reply_to Default Reply-To email address
+   * @param {String} additional_props_url URL to request additional data properties
    * @returns {Promise<Object>} rtn
    * @returns {String} rtn.error - Error message, if encountered
    * @returns {Object[]} rtn.data - Updated List Properties
    */
-  const editList = async (list_id, { list_name, collection_name, fields, email_field, filter, default_template, default_body_prop, default_reply_to }) => {
+  const editList = async (list_id, { list_name, collection_name, fields, email_field, filter, default_template, default_body_prop, default_reply_to, additional_props_url }) => {
     try {
 
       // Test List Arguments
@@ -279,7 +290,8 @@ export default () => {
         filter: filter ? JSON.parse(filter) : undefined,
         default_template,
         default_body_prop,
-        default_reply_to
+        default_reply_to,
+        additional_props_url
       }
       const resp = await api.patch(`/items/${COLLECTION_NAME}/${list_id}`, data);
       return resp?.data?.data ? { data: resp?.data?.data } : { error: "Could not edit list" };
@@ -304,7 +316,7 @@ export default () => {
    * @returns {String} rtn.error - Error message, if encountered
    * @returns {Object[]} rtn.data - Matching data items
    */
-  const getListItems = async (list_name, collection_name, fields, email_field, filter, limit=null) => {
+  const getListItems = async (list_name, collection_name, fields, email_field, filter, additional_props_url, limit=null) => {
     try {
 
       // Test List Arguments
@@ -318,7 +330,23 @@ export default () => {
         limit: limit
       }
       const resp = await api.get(`/items/${collection_name}`, { params });
-      return { data: resp?.data?.data || [] };
+      const data = resp?.data?.data || [];
+
+      // Get additional data properties
+      if ( additional_props_url ) {
+        if ( additional_props_url.startsWith('http') ) {
+          const resp_props = await fetch(additional_props_url);
+          const data_props = await resp_props.json() || {};
+          data.map((e) => e._additional_props = data_props);
+        }
+        else {
+          const resp_props = await api.get(additional_props_url);
+          const data_props = resp_props?.data?.data || {};
+          data.map((e) => e._additional_props = data_props);
+        }
+      }
+
+      return { data };
 
     }
     catch (err) {

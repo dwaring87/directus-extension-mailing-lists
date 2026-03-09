@@ -66,6 +66,8 @@
           </small>
         </div>
 
+        <VDivider />
+
         <div style="display: flex; gap: 10px">
           <div class="field-group">
             <div class="field-label">
@@ -95,6 +97,20 @@
           <VInput v-model="default_reply_to" />
           <small class="type-note">
             <p>The default email address to set as the Reply-To address.  This can be changed for each message.</p>
+          </small>
+        </div>
+
+        <VDivider />
+
+        <p class="field-group">You can optionally specify an additional <code>GET</code> request to add additional properties to the message template.  This query is made once when sending the message and it's results are added to the <code>_additional_props</code> key to each recipient's data.</p>
+
+        <div class="field-group">
+          <div class="field-label">
+            Additinal Properties Query URL
+          </div>
+          <VInput v-model="additional_props_url" />
+          <small class="type-note">
+            <p>The URL to request for additional data properties.  This can be an absolute or relative URL.</p>
           </small>
         </div>
 
@@ -180,6 +196,7 @@
   const default_template = ref("base");
   const default_body_prop = ref("html");
   const default_reply_to = ref();
+  const additional_props_url = ref();
   const limit = 50;
   watch(collection_name, () => {
     fields.value = [];
@@ -200,6 +217,7 @@
         default_template.value = data.default_template;
         default_body_prop.value = data.default_body_prop;
         default_reply_to.value = data.default_reply_to;
+        additional_props_url.value = data.additional_props_url;
       }, 0);
     }
   }
@@ -210,7 +228,7 @@
   const create = async () => {
     creating.value = true;
     creatingError.value = undefined;
-    const { error, data } = await createList(list_name.value, collection_name.value, fields.value, email_field.value, filter.value, default_template.value, default_body_prop.value, default_reply_to.value);
+    const { error, data } = await createList(list_name.value, collection_name.value, fields.value, email_field.value, filter.value, default_template.value, default_body_prop.value, default_reply_to.value, additional_props_url.value);
     creating.value = false;
     creatingError.value = error;
     creatingSuccess.value = data.list_name;
@@ -229,7 +247,8 @@
       filter: filter.value,
       default_template: default_template.value,
       default_body_prop: default_body_prop.value,
-      default_reply_to: default_reply_to.value
+      default_reply_to: default_reply_to.value,
+      additional_props_url: additional_props_url.value
     });
     creating.value = false;
     creatingError.value = error;
@@ -245,7 +264,7 @@
     testing.value = true;
     testingError.value = undefined;
     testingResults.value = undefined;
-    const { error, data } = await getListItems(list_name.value, collection_name.value, fields.value, email_field.value, filter.value, limit);
+    const { error, data } = await getListItems(list_name.value, collection_name.value, fields.value, email_field.value, filter.value, additional_props_url.value, limit);
     testing.value = false;
     testingError.value = error;
     testingResults.value = data.map((e) => flattenObject(e));
